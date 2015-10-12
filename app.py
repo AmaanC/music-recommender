@@ -1,13 +1,14 @@
 import pandas as pd
 from scipy.spatial.distance import cosine
 from sqlalchemy import create_engine
-from flask import Flask, jsonify, make_response
+from flask import Flask, jsonify, make_response, request
 
 
 # Setup
 app = Flask(__name__) # For the API
 engine = create_engine('postgresql:///testdb') # Connect to the DB
 source_table_name = 'fhrs' # This contains the raw data we got from the CSV file. It's used to compute the next 2 tables
+band_sim_table_name = 'band_sim_matrix' # We compute the recommended bands and store it in this table
 band_table_name = 'band_recs' # We compute the recommended bands and store it in this table
 
 N_SIMILAR_BANDS = 10 # Find 10 similar bands for each band
@@ -16,17 +17,19 @@ def init():
     '''
         Read the SQL tables to memory (in DataFrames) and make them available globally.
     '''
-    global source_df, band_rec_df
-    source_df = pd.read_sql_table(source_table_name, engine)
+    global source_df, band_rec_df, band_similarity_matrix
+    source_df = pd.read_sql_table(source_table_name, engine, index_col='index')
     try:
-        band_rec_df = pd.read_sql_table(band_table_name, engine)
+        band_similarity_matrix = pd.read_sql_table(band_sim_table_name, engine, index_col='index')
+        band_rec_df = pd.read_sql_table(band_table_name, engine, index_col='index')
     except ValueError as e:
         print(e)
         calc_recs()
 
 def write_df_to_db():
     print('Writing to db')
-    band_rec_df.to_sql(band_table_name, engine)
+    band_similarity_matrix.to_sql(band_sim_table_name, engine, if_exists='replace')
+    band_rec_df.to_sql(band_table_name, engine, if_exists='replace')
     return 'Wrote dataframe to db'
 
 def getScore(history, similarities):
@@ -41,11 +44,11 @@ def calc_recs():
         2) The source table and the band recommendation table are used to find the bands this particular user is most likely to
         enjoy. For example, if you like a lot of rock bands, it'll recommend a list of bands most similar to those.
     '''
-    global source_df, band_rec_df
+    global source_df, band_rec_df, band_similarity_matrix
     # Step 1) Item based collaborative filtering
     print('Calculating band similarities')
 
-    data_bands = source_df.drop('user', 1).drop('index', 1)
+    data_bands = source_df.drop('user', 1)
     band_similarity_matrix = pd.DataFrame(index=data_bands.columns, columns=data_bands.columns)
 
 
@@ -88,9 +91,10 @@ def get_rec_for_user(idx):
     print('Calculating user similarities')
 
     data_sims = pd.Series(index=source_df.columns)
+    data_bands = source_df.drop('user', 1)
 
     i = idx
-    for j in range(2, len(data_sims.index)):
+    for j in range(1, len(data_sims.index)):
         product = data_sims.index[j]
 
         if source_df.ix[i][j] == 1:
@@ -126,11 +130,11 @@ def rec_band(name):
     '''
         JSON formatted response listing similar bands
     '''
-    print(any(band_rec_df['index'] == name))
-    if any(band_rec_df['index'] == name):
+    print(name in band_rec_df.index)
+    if name in band_rec_df.index:
         # return jsonify(a=list(band_rec_df[band_rec_df['index'] == 'abba']))
         similar = list(
-            band_rec_df[band_rec_df['index'] == 'abba'].ix[1, 2:]
+            band_rec_df.loc[name].ix[1:]
         )
     else:
         return make_response(
@@ -143,6 +147,21 @@ def rec_band(name):
     resp_dict = {
         'name': name,
         'similar': similar
+    }
+    return jsonify(resp_dict)
+
+@app.route('/user/<int:id>')
+def rec_user(id):
+    try:
+        limit = int(request.args.get('limit'))
+    except:
+        limit = 10
+    recs = list(get_rec_for_user(id).head(limit).index)
+    like_list = list(source_df.iloc[id, :].loc[source_df.iloc[id, :] == 1].index)
+    resp_dict = {
+        'user': id,
+        'likes': like_list,
+        'recommendations': recs
     }
     return jsonify(resp_dict)
 
