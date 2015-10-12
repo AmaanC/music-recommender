@@ -1,0 +1,151 @@
+import pandas as pd
+from scipy.spatial.distance import cosine
+from sqlalchemy import create_engine
+from flask import Flask, jsonify, make_response
+
+
+# Setup
+app = Flask(__name__) # For the API
+engine = create_engine('postgresql:///testdb') # Connect to the DB
+source_table_name = 'fhrs' # This contains the raw data we got from the CSV file. It's used to compute the next 2 tables
+band_table_name = 'band_recs' # We compute the recommended bands and store it in this table
+
+N_SIMILAR_BANDS = 10 # Find 10 similar bands for each band
+
+def init():
+    '''
+        Read the SQL tables to memory (in DataFrames) and make them available globally.
+    '''
+    global source_df, band_rec_df
+    source_df = pd.read_sql_table(source_table_name, engine)
+    try:
+        band_rec_df = pd.read_sql_table(band_table_name, engine)
+    except ValueError as e:
+        print(e)
+        calc_recs()
+
+def write_df_to_db():
+    print('Writing to db')
+    band_rec_df.to_sql(band_table_name, engine)
+    return 'Wrote dataframe to db'
+
+def getScore(history, similarities):
+   return sum(history * similarities) / sum(similarities)
+
+@app.route('/recalc')
+def calc_recs():
+    '''
+        Calculate the recommendation tables using the source data.
+        1) The source table is used to calculate a similarity matrix of each band in relation to another. This allows us to
+        recommend "similar bands". For example, given Metallica, we can recommend Iron Maiden.
+        2) The source table and the band recommendation table are used to find the bands this particular user is most likely to
+        enjoy. For example, if you like a lot of rock bands, it'll recommend a list of bands most similar to those.
+    '''
+    global source_df, band_rec_df
+    # Step 1) Item based collaborative filtering
+    print('Calculating band similarities')
+
+    data_bands = source_df.drop('user', 1).drop('index', 1)
+    band_similarity_matrix = pd.DataFrame(index=data_bands.columns, columns=data_bands.columns)
+
+
+    for i in range(0, len(band_similarity_matrix.columns)):
+        # Loop through the columns for each column
+        for j in range(0, len(band_similarity_matrix.columns)):
+          # Fill in placeholder with cosine similarities
+          band_similarity_matrix.ix[i, j] = 1 - cosine(data_bands.ix[:,i], data_bands.ix[:,j])
+    
+    band_rec_df = pd.DataFrame(index=band_similarity_matrix.columns, columns=range(1, N_SIMILAR_BANDS + 1))
+    for i in range(0, len(band_similarity_matrix.columns)):
+       band_rec_df.ix[i, :N_SIMILAR_BANDS] = band_similarity_matrix.ix[0:, i].order(ascending=False)[:N_SIMILAR_BANDS].index
+
+    # Done! Now we have recommendations for every band
+    return write_df_to_db()
+
+def get_rec_for_user(idx):
+    '''
+        Calculates the best bands to recommend to a user and returns a Pandas Series with the co-effecients for each
+        band.
+        The process:
+        We look at all the bands, and for every band that the user hasn't heard, we get the top N similar bands.
+        For these N bands, we calculate a score based on the user's history.
+        For example:
+        The user hasn't heard Coldplay.
+        Coldplay's most similar bands are:
+            1                  coldplay
+            2     red hot chili peppers
+            3               snow patrol
+            4              jack johnson
+            5                bloc party
+            6                     keane
+            7                      muse
+            8                 the kooks
+            9               the killers
+            10                radiohead
+        Coldplay's score for this user is directly proportional to X, where X is the number of bands
+        in the list above which the user already likes.
+    '''
+    print('Calculating user similarities')
+
+    data_sims = pd.Series(index=source_df.columns)
+
+    i = idx
+    for j in range(2, len(data_sims.index)):
+        product = data_sims.index[j]
+
+        if source_df.ix[i][j] == 1:
+            # User's already heard the band, so we don't want to recommend it again
+            data_sims.ix[j] = 0
+        else:
+            # We'll find bands that are similar to this unheard band
+            product_top_names = band_rec_df.ix[product][1:N_SIMILAR_BANDS]
+            # Then let's put these bands in descending order of how similar they are
+            product_top_sims = band_similarity_matrix.ix[product].order(ascending=False)[1:N_SIMILAR_BANDS]
+            # We'll get the bands that user has heard out of the similar ones
+            user_purchases = data_bands.ix[idx, product_top_names]
+
+            # The score basically determines the ratio like this:
+            # There are 10 bands similar to X, the current "product"
+            # Out of these 10 bands, the user likes 6
+            # Using these and the similarity factor of the bands a score is calculated in getScore
+            data_sims.ix[j] = getScore(user_purchases, product_top_sims)
+
+    return data_sims.order(ascending=False)
+
+
+@app.route('/')
+def index():
+    return "Online!"
+
+@app.errorhandler(404)
+def not_found(error):
+    return make_response(jsonify({'error': 'Not found'}), 404)
+
+@app.route('/band/<name>')
+def rec_band(name):
+    '''
+        JSON formatted response listing similar bands
+    '''
+    print(any(band_rec_df['index'] == name))
+    if any(band_rec_df['index'] == name):
+        # return jsonify(a=list(band_rec_df[band_rec_df['index'] == 'abba']))
+        similar = list(
+            band_rec_df[band_rec_df['index'] == 'abba'].ix[1, 2:]
+        )
+    else:
+        return make_response(
+            jsonify({
+                'error': 'Band {} not found'.format(name)
+            }),
+            404
+        )
+
+    resp_dict = {
+        'name': name,
+        'similar': similar
+    }
+    return jsonify(resp_dict)
+
+if __name__ == '__main__':
+    init()
+    app.run(debug=True)
