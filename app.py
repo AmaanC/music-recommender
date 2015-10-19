@@ -166,6 +166,9 @@ def rec_band(name):
 
 @app.route('/api/v1.0/user/<int:id>')
 def rec_user(id):
+    '''
+        Show the bands that a user already likes, and the bands we'd recommend to the user.
+    '''
     try:
         limit = int(request.args.get('limit'))
     except:
