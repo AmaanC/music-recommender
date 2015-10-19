@@ -7,7 +7,7 @@ from flask import Flask, jsonify, make_response, request
 # Setup
 app = Flask(__name__) # For the API
 engine = create_engine('postgresql:///testdb') # Connect to the DB
-source_table_name = 'fhrs' # This contains the raw data we got from the CSV file. It's used to compute the next 2 tables
+source_table_name = 'source_data' # This contains the raw data we got from the CSV file. It's used to compute the next 2 tables
 band_sim_table_name = 'band_sim_matrix' # We compute the recommended bands and store it in this table
 band_table_name = 'band_recs' # We compute the recommended bands and store it in this table
 
@@ -18,7 +18,14 @@ def init():
         Read the SQL tables to memory (in DataFrames) and make them available globally.
     '''
     global source_df, band_rec_df, band_similarity_matrix
-    source_df = pd.read_sql_table(source_table_name, engine, index_col='index')
+    try:
+        source_df = pd.read_sql_table(source_table_name, engine, index_col='index')
+    except ValueError as e:
+        print('Source table missing. Loading from CSV, and writing to DB.')
+        source_df = pd.read_csv('data.csv')
+        source_df.columns = [c.lower() for c in source_df.columns]
+        source_df.to_sql(source_table_name, engine)
+        print('Wrote source data to DB.')
     try:
         band_similarity_matrix = pd.read_sql_table(band_sim_table_name, engine, index_col='index')
         band_rec_df = pd.read_sql_table(band_table_name, engine, index_col='index')
@@ -35,7 +42,7 @@ def write_df_to_db():
 def getScore(history, similarities):
    return sum(history * similarities) / sum(similarities)
 
-@app.route('/recalc')
+@app.route('/api/v1.0/recalc')
 def calc_recs():
     '''
         Calculate the recommendation tables using the source data.
@@ -126,13 +133,13 @@ def not_found(error):
     print(request.path)
     return make_response(jsonify({'error': 'Not found'}), 404)
 
-@app.route('/band/')
+@app.route('/api/v1.0/band/')
 def list_bands():
     return jsonify({
         'bands': list(source_df.columns[1:]) # Skipping the user column
     })
 
-@app.route('/band/<path:name>')
+@app.route('/api/v1.0/band/<path:name>')
 def rec_band(name):
     '''
         JSON formatted response listing similar bands
@@ -157,7 +164,7 @@ def rec_band(name):
     }
     return jsonify(resp_dict)
 
-@app.route('/user/<int:id>')
+@app.route('/api/v1.0/user/<int:id>')
 def rec_user(id):
     try:
         limit = int(request.args.get('limit'))
