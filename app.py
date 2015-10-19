@@ -1,6 +1,6 @@
 import pandas as pd
 from scipy.spatial.distance import cosine
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Table, MetaData
 from flask import Flask, jsonify, make_response, request
 
 
@@ -17,7 +17,8 @@ def init():
     '''
         Read the SQL tables to memory (in DataFrames) and make them available globally.
     '''
-    global source_df, band_rec_df, band_similarity_matrix
+    global insert_user_stmt, source_table, source_df, band_rec_df, band_similarity_matrix
+    meta = MetaData()
     try:
         source_df = pd.read_sql_table(source_table_name, engine, index_col='index')
     except ValueError as e:
@@ -26,6 +27,8 @@ def init():
         source_df.columns = [c.lower() for c in source_df.columns]
         source_df.to_sql(source_table_name, engine)
         print('Wrote source data to DB.')
+    source_table = Table(source_table_name, meta, autoload=True, autoload_with=engine)
+    insert_user_stmt = source_table.insert().values()
     try:
         band_similarity_matrix = pd.read_sql_table(band_sim_table_name, engine, index_col='index')
         band_rec_df = pd.read_sql_table(band_table_name, engine, index_col='index')
@@ -197,15 +200,34 @@ def list_users():
 
 @app.route('/api/v1.0/user/', methods=['POST'])
 def add_user():
+    global source_df
     data = request.get_json(force=True)
-    if not data:
+    if not data or not data['likes']:
         return jsonify({
             'error': 'Need a JSON request formatted like: { "likes": ["simple plan", "abba", "coldplay"] }'
         })
-    else:
+    elif all(band_name in source_df.columns for band_name in data['likes']):
         print(data)
+        user_data = dict.fromkeys(source_df.columns, 0)
+        for band_name in data['likes']:
+            if band_name != 'index' and band_name != 'user':
+                user_data[band_name] = 1
+        # Add to pandas DF here
+        source_df = source_df.append(user_data, ignore_index=True)
+        user_data['index'] = source_df.shape[0] - 1 # Subtract 1 since we *just* added an index
+        # Add to db here
+        
+        conn = engine.connect()
+        conn.execute(insert_user_stmt, **user_data)
+        conn.close()
 
-        return 'a'
+        return jsonify({
+            'user_id': user_data['index']
+        })
+    else:
+        return jsonify({
+            'error': 'One or more bands were not found in the list.'
+        })
 
 if __name__ == '__main__':
     init()
