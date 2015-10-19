@@ -173,6 +173,13 @@ def rec_user(id):
         limit = int(request.args.get('limit'))
     except:
         limit = 10
+    if id not in source_df.index:
+        return make_response(
+            jsonify({
+                'error': 'User {} not found'.format(id)
+            }),
+            404
+        )
     recs = list(get_rec_for_user(id).head(limit).index)
     like_list = list(source_df.iloc[id, :].loc[source_df.iloc[id, :] == 1].index)
     resp_dict = {
@@ -181,6 +188,24 @@ def rec_user(id):
         'recommendations': recs
     }
     return jsonify(resp_dict)
+
+@app.route('/api/v1.0/user/', methods=['GET'])
+def list_users():
+    return jsonify({
+        'num_of_users': source_df.shape[0]
+    })
+
+@app.route('/api/v1.0/user/', methods=['POST'])
+def add_user():
+    data = request.get_json(force=True)
+    if not data:
+        return jsonify({
+            'error': 'Need a JSON request formatted like: { "likes": ["simple plan", "abba", "coldplay"] }'
+        })
+    else:
+        print(data)
+
+        return 'a'
 
 if __name__ == '__main__':
     init()
