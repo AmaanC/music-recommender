@@ -125,6 +125,12 @@ def index():
 def not_found(error):
     return make_response(jsonify({'error': 'Not found'}), 404)
 
+@app.route('/band/')
+def list_bands():
+    return jsonify({
+        'bands': list(source_df.columns[1:]) # Skipping the user column
+    })
+
 @app.route('/band/<name>')
 def rec_band(name):
     '''
