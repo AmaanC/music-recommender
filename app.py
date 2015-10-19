@@ -123,6 +123,7 @@ def index():
 
 @app.errorhandler(404)
 def not_found(error):
+    print(request.path)
     return make_response(jsonify({'error': 'Not found'}), 404)
 
 @app.route('/band/')
@@ -131,7 +132,7 @@ def list_bands():
         'bands': list(source_df.columns[1:]) # Skipping the user column
     })
 
-@app.route('/band/<name>')
+@app.route('/band/<path:name>')
 def rec_band(name):
     '''
         JSON formatted response listing similar bands
