@@ -5,7 +5,7 @@ from flask import Flask, jsonify, make_response, request
 
 
 # Setup
-app = Flask(__name__) # For the API
+app = Flask(__name__, static_path='/static', static_url_path='/') # For the API
 engine = create_engine('postgresql:///testdb') # Connect to the DB
 source_table_name = 'source_data' # This contains the raw data we got from the CSV file. It's used to compute the next 2 tables
 band_sim_table_name = 'band_sim_matrix' # We compute the recommended bands and store it in this table
@@ -126,10 +126,9 @@ def get_rec_for_user(idx):
 
     return data_sims.order(ascending=False)
 
-
 @app.route('/')
 def index():
-    return "Online!"
+    return app.send_static_file('index.html')
 
 @app.errorhandler(404)
 def not_found(error):
