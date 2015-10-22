@@ -14,13 +14,10 @@
 
     <!-- Bootstrap core CSS -->
     <link href="../../dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../../select/bootstrap-select.min.css" rel="stylesheet">
 
     <!-- Custom styles for this template -->
     <link href="cover.css" rel="stylesheet">
-
-    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
-    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
-    <script src="../../assets/js/ie-emulation-modes-warning.js"></script>
 
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
@@ -51,17 +48,38 @@
             </div>
           </div>
 
-          <div class="inner cover">
-            <h1 class="cover-heading">Recommend Bands</h1>
-            <p class="lead">This project uses LastFM's dataset to find similar bands, and to make recommendations to users based on those computed <a href='https://en.wikipedia.org/wiki/Cosine_similarity' target='blank'>cosine similarities.</a></p>
-            <p class="lead">
-              <a href="demo.html" class="btn btn-lg btn-default">Demo</a>
-            </p>
-          </div>
+          <div class="container-fluid">
+            <div class="row vdivide">
+              <div class="col-sm-6 text-center">
+                <h3>Find similar bands</h3>
+                <select id='bandSelect' class="selectpicker" title="Select one band" data-live-search="true">
+                </select>
 
-          <div class="mastfoot">
-            <div class="inner">
-              <p>Cover template for <a href="http://getbootstrap.com">Bootstrap</a>, by <a href="https://twitter.com/mdo">@mdo</a>.</p>
+                <br>&nbsp;
+                <p>
+                  <input type='button' id='getSimilarBtn' class="btn btn-lg btn-default" value='Get similar'>
+                </p>
+                <div class="panel panel-default">
+                  <!-- Default panel contents -->
+                  <div class="panel-heading">Bands like this one</div>
+
+                  <!-- List group -->
+                  <ul id='bandList' class="list-group">
+                    <li class="list-group-item">Band 1</li>
+                    <li class="list-group-item">Band 2</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="col-sm-6 text-center">
+                <h3>Get recommendations based on your taste</h3>
+                <select id='userSelect' class="selectpicker" multiple title="Select bands you like" data-live-search="true">
+                </select>
+
+                <br>&nbsp;
+                <p>
+                  <a href="demo.html" class="btn btn-lg btn-default">Add user</a>
+                </p>
+              </div>
             </div>
           </div>
 
@@ -76,7 +94,7 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <script src="../../dist/js/bootstrap.min.js"></script>
-    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
-    <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script>
+    <script src="../../select/bootstrap-select.min.js"></script>
+    <script src="demo.js"></script>
   </body>
 </html>
