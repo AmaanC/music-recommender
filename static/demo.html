@@ -59,6 +59,7 @@
                 <p>
                   <input type='button' id='getSimilarBtn' class="btn btn-lg btn-default" value='Get similar'>
                 </p>
+                <p>&nbsp;</p>
                 <div class="panel panel-default">
                   <!-- Default panel contents -->
                   <div class="panel-heading">Bands like this one</div>
@@ -69,16 +70,46 @@
                     <li class="list-group-item">Band 2</li>
                   </ul>
                 </div>
+              <p>&nbsp;</p>
               </div>
               <div class="col-sm-6 text-center">
-                <h3>Get recommendations based on your taste</h3>
-                <select id='userSelect' class="selectpicker" multiple title="Select bands you like" data-live-search="true">
-                </select>
+                <ul class="nav nav-tabs">
+                  <li role="presentation" class="active"><a href="#addUserTab" data-toggle="tab">Add user</a></li>
+                  <li role="presentation"><a href="#checkUserTab" data-toggle="tab">Check user</a></li>
+                </ul>
+                <div class="tab-content">
+                  <div id="addUserTab" class="tab-pane active">
+                    <h3>Get recommendations based on your taste</h3>
+                    <select id='userSelect' class="selectpicker" multiple title="Select bands you like" data-live-search="true">
+                    </select>
 
-                <br>&nbsp;
-                <p>
-                  <a href="demo.html" class="btn btn-lg btn-default">Add user</a>
-                </p>
+                    <br>&nbsp;
+                    <p>
+                      <input type='button' id='addUserBtn' class="btn btn-lg btn-default" value='Add user'>
+                    </p>
+                    <br>
+                    <div id='userResp'></div>
+                  </div>
+
+                  <div id="checkUserTab" class="tab-pane">
+                    
+                    <h3>Check recommendations for user</h3>
+                    <input type="text" class="form-control" placeholder="User ID">&nbsp;
+                    <p>
+                      <input type='button' id='getUserBtn' class="btn btn-lg btn-default" value='Get recommendations'>
+                    </p>
+                    <div class="panel panel-default">
+                      <!-- Default panel contents -->
+                      <div class="panel-heading">Bands like this one</div>
+
+                      <!-- List group -->
+                      <ul id='userList' class="list-group">
+                        <li class="list-group-item">Band 1</li>
+                        <li class="list-group-item">Band 2</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
