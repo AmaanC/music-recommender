@@ -6,8 +6,10 @@
     var bandList = document.getElementById('bandList');
     var userList = document.getElementById('userList');
     var userInput = document.getElementById('userInput');
+    var userResp = document.getElementById('userResp');
 
     var getSimilarBtn = document.getElementById('getSimilarBtn');
+    var addUserBtn = document.getElementById('addUserBtn');
     var getUserForm = document.getElementById('getUserForm');
 
     var init = function() {
@@ -91,7 +93,30 @@
         return false;
     };
 
+    var addUser = function() {
+        var userLikes = [].slice.apply(userSelect.selectedOptions).map(function(elem) {
+            return elem.textContent;
+        });
+        var obj = {
+            likes: userLikes
+        };
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', API_URL + 'user/');
+        xhr.addEventListener('load', function() {
+            var respObj = JSON.parse(this.responseText);
+            if (respObj.error) {
+                console.error(respObj.error);
+                return;
+            }
+            userResp.textContent = 'User added. Your ID is: ' + respObj.user_id;
+        });
+
+        xhr.send(JSON.stringify(obj));
+    };
+
     window.addEventListener('load', init);
     getSimilarBtn.addEventListener('click', getSimilar);
     getUserForm.addEventListener('submit', getUserRecs);
+    addUserBtn.addEventListener('click', addUser);
 })();
