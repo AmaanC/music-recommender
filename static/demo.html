@@ -94,10 +94,12 @@
                   <div id="checkUserTab" class="tab-pane">
                     
                     <h3>Check recommendations for user</h3>
-                    <input type="text" class="form-control" placeholder="User ID">&nbsp;
-                    <p>
-                      <input type='button' id='getUserBtn' class="btn btn-lg btn-default" value='Get recommendations'>
-                    </p>
+                    <form id='getUserForm'>
+                      <input id='userInput' type="text" class="form-control" placeholder="User ID">&nbsp;
+                      <p>
+                        <input type='submit' class="btn btn-lg btn-default" value='Get recommendations'>
+                      </p>
+                    </form>
                     <div class="panel panel-default">
                       <!-- Default panel contents -->
                       <div class="panel-heading">Bands for user</div>
