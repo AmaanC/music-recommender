@@ -6,7 +6,7 @@ It was made for a college miniproject for the introductory Database Management S
 
 ##Technology Stack:
 
-PostgreSQL - Database server
+PostgreSQL - Database server (create a database named "testdb")
 
 Python - Backend web server
 
