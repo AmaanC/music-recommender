@@ -70,7 +70,7 @@ def calc_recs():
     
     band_rec_df = pd.DataFrame(index=band_similarity_matrix.columns, columns=range(1, N_SIMILAR_BANDS + 1))
     for i in range(0, len(band_similarity_matrix.columns)):
-       band_rec_df.ix[i, :N_SIMILAR_BANDS] = band_similarity_matrix.ix[0:, i].order(ascending=False)[:N_SIMILAR_BANDS].index
+       band_rec_df.ix[i, :N_SIMILAR_BANDS] = band_similarity_matrix.ix[0:, i].sort_values(ascending=False)[:N_SIMILAR_BANDS].index
 
     # Done! Now we have recommendations for every band
     return write_df_to_db()
@@ -114,7 +114,7 @@ def get_rec_for_user(idx):
             # We'll find bands that are similar to this unheard band
             product_top_names = band_rec_df.ix[product][1:N_SIMILAR_BANDS]
             # Then let's put these bands in descending order of how similar they are
-            product_top_sims = band_similarity_matrix.ix[product].order(ascending=False)[1:N_SIMILAR_BANDS]
+            product_top_sims = band_similarity_matrix.ix[product].sort_values(ascending=False)[1:N_SIMILAR_BANDS]
             # We'll get the bands that user has heard out of the similar ones
             user_purchases = data_bands.ix[idx, product_top_names]
 
@@ -124,7 +124,7 @@ def get_rec_for_user(idx):
             # Using these and the similarity factor of the bands a score is calculated in getScore
             data_sims.ix[j] = getScore(user_purchases, product_top_sims)
 
-    return data_sims.order(ascending=False)
+    return data_sims.sort_values(ascending=False)
 
 @app.route('/')
 def index():
